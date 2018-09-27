@@ -12,7 +12,7 @@ import requests
 from dateutil.parser import parse
 
 # Custom imports
-from color import pRed, pGreen
+from color import pRed, pGreen, pBlue
 
 
 # Load configuration
@@ -104,16 +104,24 @@ class PullRequest(GitHub):
 
             if len(pullRequests):
                 pRed("Pull requests para {}".format(repository))
-                for pr in pullRequests:
-                    r_endpoint = BASE_API_URL.format(
-                                  reviews_path.format(repository, pr['number']))
-                    reviews_reponse = requests.get(r_endpoint, headers=AUTH)
-                    reviews = reviews_reponse.json()
 
-                    if len(reviews):
-                        review = reviews[-1]['state']
-                    else:
-                        review = "WAITING_REVIEW"
+                review_status = None
+                for pr in pullRequests:
+                    for label in pr['labels']:
+                        if "Status: " in label['name']:
+                            review_status = label['name'][8:]
+                            break
+
+                    if not review_status:
+                        r_endpoint = BASE_API_URL.format(
+                                        reviews_path.format(repository, pr['number']))
+                        reviews_reponse = requests.get(r_endpoint, headers=AUTH)
+                        reviews = reviews_reponse.json()
+
+                        if len(reviews):
+                            review_status = reviews[-1]['state']
+                        else:
+                            review_status = "REVIEW_REQUESTED"
 
                     updated_at = parse(pr['updated_at'])
                     pGreen("\tCreator: ", end="")
@@ -121,10 +129,13 @@ class PullRequest(GitHub):
                     pGreen("\tTitle: ", end="")
                     print(pr['title'])
                     pGreen("\tReview status: ", end="")
-                    if review == "WAITING_REVIEW":
-                        pRed(review)
+                    if review_status == "REVIEW_REQUESTED":
+                        printFunction = pRed
+                    elif review_status == "CHANGES_REQUESTED":
+                        printFunction = pBlue
                     else:
-                        print(review)
+                        printFunction = print
+                    printFunction(review_status)
                     pGreen("\tLast change: ", end="")
                     print('{} {}'.format(updated_at.date(), updated_at.time()))
                     pGreen("\tUrl: ", end="")
