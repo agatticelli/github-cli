@@ -12,3 +12,7 @@ def pRed(msg, **kwargs):
 
 def pGreen(msg, **kwargs):
     print(OKGREEN + msg + ENDC, **kwargs)
+
+def pBlue(msg, **kwargs):
+    print(OKBLUE + msg + ENDC, **kwargs)
+
